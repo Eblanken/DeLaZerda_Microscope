@@ -37,7 +37,7 @@ classdef Manager_Camera
             obj.camera.Trigger.Set(uc480.Defines.TriggerMode.Software); % Software trigger
             [~, memoryID] = obj.camera.Memory.Allocate(true);
             obj.cameraMemoryId = memoryID;
-            [~, Width, Height, Bits, ~] = cam.Memory.Inquire(obj.cameraMemoryId);
+            [~, Width, Height, Bits, ~] = obj.camera.Memory.Inquire(obj.cameraMemoryId);
             obj.cameraWidth = Width;
             obj.cameraHeight = Height;
             obj.cameraBits = Bits;
@@ -62,16 +62,17 @@ classdef Manager_Camera
         %   'newImage' The composite image.
         %
         function newImage = acquireImage(obj, numFrameAverages)
-            acquisitions = zeros(obj.cameraWidth, obj.cameraHeight, numFrameAverages);
+            acquisitions = zeros(obj.cameraHeight, obj.cameraWidth, numFrameAverages);
             for index = 1:numFrameAverages
-                cam.Acquisition.Freeze(uc480.Defines.DeviceParameter.Wait);
-                [~, tmp] = cam.Memory.CopyToArray(obj.cameraMemoryId);
+                obj.camera.Acquisition.Freeze(uc480.Defines.DeviceParameter.Wait);
+                [~, tmp] = obj.camera.Memory.CopyToArray(obj.cameraMemoryId);
                 Data = reshape(uint8(tmp), [obj.cameraBits/8, obj.cameraWidth, obj.cameraHeight]);
                 Data = Data(1:3, 1:obj.cameraWidth, 1:obj.cameraHeight);
                 Data = permute(Data, [3, 2, 1]);
+                size(rgb2gray(Data))
                 acquisitions(:, :, index) = rgb2gray(Data);
             end
-            newImage = mean(acquisitions, 3);
+            newImage = mean(acquisitions, 3)./255;
         end
         
         %
@@ -96,6 +97,28 @@ classdef Manager_Camera
             imageName = sprintf('%s.png', imageName);
             fullPath = sprintf('%s/%s', folderName, imageName);
             imwrite(obj.acquireImage(numFrameAverages), fullPath);
+        end
+        
+        %
+        % Descripion:
+        %   Simple getter for height (number of rows) of camera images.
+        %
+        % Returns:
+        %   Returns the height of images from the camera.
+        %
+        function height = getHeight(obj)
+            height = obj.cameraHeight;
+        end
+        
+        %
+        % Description:
+        %   Simple getter for the width of an image.
+        %
+        % Returns:
+        %   Number of columns in acquired images.
+        %
+        function width = getWidth(obj)
+            width = obj.cameraWidth;
         end
     end
     

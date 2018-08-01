@@ -10,6 +10,9 @@
 %   a composite image.
 %
 
+close all;
+clear all;
+
 % ---------------------------------- Settings -----------------------------
 
 
@@ -23,10 +26,13 @@
 exitProgram = false;
 cameraManager = Manager_Camera(0);
 figure(1);
+hold on;
+imageObject = imshow(zeros(cameraManager.getHeight, cameraManager.getWidth), []);
 while(~exitProgram) % Main loop just shows camera footage
-    hold on;
-    imshow(cameraManager.acquireImage(5));
-    hold off;
+    refresh(1);
+    set(imageObject, 'CData', cameraManager.acquireImage(1));
+    drawnow;
 end
+hold off;
 
 % --------------------------------- Functions -----------------------------
