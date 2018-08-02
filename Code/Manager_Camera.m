@@ -17,6 +17,8 @@ classdef Manager_Camera
         cameraWidth = [];
         cameraHeight = [];
         cameraBits = [];
+        cameraScaleRange = [];
+        previousImage = [];
     end
     
     methods(Access = 'public')
@@ -51,6 +53,59 @@ classdef Manager_Camera
             obj.camera.Exit;
         end
         
+        %
+        % Description:
+        %   Returns the master gain setting of the camera.
+        %
+        % Returns:
+        %   Returns the currently set gain of the camera.
+        %
+        function totalGain = getMasterGain(obj)
+            totalGain = obj.camera.GainFactor.GetMaster();
+        end
+        
+        %
+        % Description:
+        %   Sets the master gain setting of the camera. If auto gain
+        %   is enabled then it is overwritten and must be re-enabled.
+        %
+        % Parameters:
+        %   'gainValue' The gain to set for the camera. If set to [] then
+        %               automatically scales.
+        %
+        function setMasterGain(obj, gainValue)
+            if(isEmpty(gainValue))
+                obj.camera.AutoFeaturesSensorGain.SetEnable(boolEnable)
+            else
+                obj.camera.GainFactor.SetMaster(gainValue);
+            end
+        end
+
+        %
+        % Description:
+        %   Returns the highest and lowest values of the previous image.
+        % 
+        % Returns:
+        %   Array of the form [minValue, maxValue].
+        %
+        function bounds = getScaleRange(obj)
+            bounds = zeros(1, 2);
+            bounds(1, 1) = min(min(obj.previousImage));
+            bounds(1, 2) = max(max(obj.previousImage));
+        end
+        
+        %
+        % Description:
+        %   Sets the scale range for images to be normalized to.
+        %
+        % Parameters:
+        %   'bounds' Array of the form [min, max] to scale images by. If
+        %            set to [] then automatically scales.
+        %
+        function setScaleRange(obj, bounds)
+            obj.cameraScaleRange = bounds;
+        end
+        
         % 
         % Description:
         %   Captures several images and returns the average.
@@ -73,30 +128,34 @@ classdef Manager_Camera
                 acquisitions(:, :, index) = rgb2gray(Data);
             end
             newImage = mean(acquisitions, 3)./255;
+            if(isEmpty(obj.cameraScaleRange))
+                newImage = mat2gray(newImage);
+            else
+                newImage = mat2gray(newImage, [obj.cameraScaleRange(1, 1), obj.cameraScaleRange(1, 2)]);
+            end
+            obj.previousImage = newImage;
         end
         
         %
         % Decription:
-        %   Captures a new image and immediately saves it to the disk.
+        %   Saves the most recently captured image to the disk.
         %
         % Parameters:
-        %   'numFrameAverages' The number of frames to average when capturing.
-        %   'varargin'         Optional argument for the name of the file
-        %                      to save. Otherwise uses current date and
-        %                      time.
+        %   'name' If used, the file is named this. Set to [] to use the 
+        %          current date and time.
         %
-        function saveImage(obj, numFrameAverages, varargin)
+        function saveImage(obj, name)
             time = clock;
             folderName = sprintf('Acquisitions\Snapshots');
             imageName = [];
-            if(isempty(varargin) > 0)
-                imageName = varargin(1);
-            else
+            if(isempty(name))
                 imageName = sprintf('Image_Manual_%d\%d\%d_%d:$d:%d', time(2), time(3), time(1) , time(4), time(5), time(6));
+            else 
+                imageName = sprintf('%s', name);
             end
             imageName = sprintf('%s.png', imageName);
             fullPath = sprintf('%s/%s', folderName, imageName);
-            imwrite(obj.acquireImage(numFrameAverages), fullPath);
+            imwrite(obj.previousImage, fullPath);
         end
         
         %
