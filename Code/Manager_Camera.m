@@ -17,7 +17,7 @@ classdef Manager_Camera
         cameraWidth = [];
         cameraHeight = [];
         cameraBits = [];
-        cameraScaleRange = [];
+        cameraScaleRange = NaN;
         previousImage = [];
     end
     
@@ -70,12 +70,12 @@ classdef Manager_Camera
         %   is enabled then it is overwritten and must be re-enabled.
         %
         % Parameters:
-        %   'gainValue' The gain to set for the camera. If set to [] then
+        %   'gainValue' The gain to set for the camera. If set to nan then
         %               automatically scales.
         %
         function setMasterGain(obj, gainValue)
-            if(isEmpty(gainValue))
-                obj.camera.AutoFeaturesSensorGain.SetEnable(boolEnable)
+            if(isnan(gainValue))
+                obj.camera.AutoFeatures.Sensor.Gain.SetEnable(true)
             else
                 obj.camera.GainFactor.SetMaster(gainValue);
             end
@@ -100,10 +100,14 @@ classdef Manager_Camera
         %
         % Parameters:
         %   'bounds' Array of the form [min, max] to scale images by. If
-        %            set to [] then automatically scales.
+        %            set to nan then automatically scales.
         %
         function setScaleRange(obj, bounds)
-            obj.cameraScaleRange = bounds;
+            if(isnan(bounds))
+                obj.cameraScaleRange = NaN;
+            else
+                obj.cameraScaleRange = bounds;
+            end
         end
         
         % 
@@ -128,7 +132,7 @@ classdef Manager_Camera
                 acquisitions(:, :, index) = rgb2gray(Data);
             end
             newImage = mean(acquisitions, 3)./255;
-            if(isEmpty(obj.cameraScaleRange))
+            if(isnan(obj.cameraScaleRange))
                 newImage = mat2gray(newImage);
             else
                 newImage = mat2gray(newImage, [obj.cameraScaleRange(1, 1), obj.cameraScaleRange(1, 2)]);
